@@ -12,6 +12,9 @@ bl_info = {
 
 
 class AddSelectedToExportGroupOperator(bpy.types.Operator):
+    """ Add selected objects to an export group.
+    If op is invoked, user will be asked for group name.
+    """
     bl_idname = "object.add_selected_to_group"
     bl_label = "Add selected objects to export group"
     bl_options = {"REGISTER", "UNDO"}
@@ -49,6 +52,9 @@ enum_modifier_triangulate_ngon_method_items = [
 
 
 class ExportGroupSettings(bpy.types.PropertyGroup):
+    """ Complete set of settings for exporting alembic.
+    Also contains a couple of service settings like expanded and group_selected.
+    """
     expanded: bpy.props.BoolProperty(
         name="Expanded",
         default=False)
@@ -171,6 +177,7 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
 
 
 class ObjectExportGroupPanel(bpy.types.Panel):
+    """ Panel in which the user can enter a group name to add to. """
     bl_idname = "OBJECT_PT_export_group"
     bl_label = "Alembic export group"
     bl_space_type = "PROPERTIES"
@@ -183,6 +190,8 @@ class ObjectExportGroupPanel(bpy.types.Panel):
 
 
 class SceneExportGroupPanel(bpy.types.UIList):
+    """ Panel that contains settings for a single group
+    """
     bl_idname = "SCENE_UL_export_group"
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index, flt_flag):
         box = layout.box()
@@ -197,11 +206,15 @@ class SceneExportGroupPanel(bpy.types.UIList):
         col.prop(item, "group_selected")
 
         if item.expanded:
-            for propname in  [k for k in item.__annotations__.keys() if k != "expanded"]:
+            for propname in [k
+                             for k in item.__annotations__.keys()
+                             if k not in ["expanded", "group_selected"]]:
                 box.prop(item, propname)
 
 
 class SceneExportGroupsPanel(bpy.types.Panel):
+    """ Top-level panel for export settings.
+    """
     bl_label = "Alembic export group settings"
     bl_idname = "SCENE_PT_export_groups"
     bl_space_type = "VIEW_3D"
@@ -230,18 +243,9 @@ class SceneExportGroupsPanel(bpy.types.Panel):
             icon="TRASH")
 
 
-class DeleteExportGroupOperator(bpy.types.Operator):
-    bl_idname = "scene.delete_export_group"
-    bl_label = "Delete export group"
-
-    group_name: bpy.props.StringProperty(name="Group name")
-
-    def execute(self, context):
-        print("Running")
-        return {"FINISHED"}
-
-
 class DeleteSelectedExportGroupsOperator(bpy.types.Operator):
+    """ Delete the currently selected export groups.
+    """
     bl_idname = "scene.delete_selected_export_groups"
     bl_label = "Delete selected export groups"
 
@@ -277,8 +281,9 @@ def export_group(settings):
 
 
 class ExportGroupsOperator(bpy.types.Operator):
+    """ Export all alembic groups operator """
     bl_idname = "scene.export_groups"
-    bl_label = "Export groups"
+    bl_label = "Export all groups"
 
     def execute(self, context):
         print("Running")
@@ -297,6 +302,7 @@ class ExportGroupsOperator(bpy.types.Operator):
 
 
 class ExportSelectedGroupsOperator(bpy.types.Operator):
+    """ Export the currently selected groups """
     bl_idname = "scene.export_selected_groups"
     bl_label = "Export selected groups"
 
@@ -337,7 +343,6 @@ def register():
     bpy.utils.register_class(ObjectExportGroupPanel)
     bpy.utils.register_class(SceneExportGroupPanel)
     bpy.utils.register_class(SceneExportGroupsPanel)
-    bpy.utils.register_class(DeleteExportGroupOperator)
     bpy.utils.register_class(DeleteSelectedExportGroupsOperator)
     bpy.utils.register_class(ExportGroupsOperator)
     bpy.utils.register_class(ExportSelectedGroupsOperator)
@@ -353,7 +358,6 @@ def unregister():
     bpy.utils.unregister_class(ObjectExportGroupPanel)
     bpy.utils.unregister_class(SceneExportGroupPanel)
     bpy.utils.unregister_class(SceneExportGroupsPanel)
-    bpy.utils.unregister_class(DeleteExportGroupOperator)
     bpy.utils.unregister_class(DeleteSelectedExportGroupsOperator)
     bpy.utils.unregister_class(ExportGroupsOperator)
     bpy.utils.unregister_class(ExportSelectedGroupsOperator)
