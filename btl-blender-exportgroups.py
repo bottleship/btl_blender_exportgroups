@@ -1,7 +1,8 @@
 import bpy
 import sys
+import os
 
-from bpy import context
+# from bpy import context
 
 
 bl_info = {
@@ -11,11 +12,32 @@ bl_info = {
 }
 
 
+def add_selected_objects_to_group(group_name, context):
+    found_groups = [g for g in context.scene.alembic_export_groups
+                    if g.name == group_name]
+
+    # if group not found, create it
+    if len(found_groups) == 0:
+        new_group = context.scene.alembic_export_groups.add()
+        # new_group.objects = bpy.props.CollectionProperty(type=GroupObject)
+        new_group.name = group_name
+        context.scene.alembic_export_index += 1
+        for obj in context.selected_objects:
+            obj_ref = new_group.objects.add()
+            obj_ref.object = obj
+    else:
+        found_objects = [o.object for o in found_groups[0].objects]
+        for obj in context.selected_objects:
+            if obj not in found_objects:
+                obj_ref = found_groups[0].objects.add()
+                obj_ref.object = obj
+
+
 class AddSelectedToExportGroupOperator(bpy.types.Operator):
     """ Add selected objects to an export group.
     If op is invoked, user will be asked for group name.
     """
-    bl_idname = "object.add_selected_to_group"
+    bl_idname = "scene.add_selected_to_group"
     bl_label = "Add selected objects to export group"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -26,19 +48,71 @@ class AddSelectedToExportGroupOperator(bpy.types.Operator):
 
     def execute(self, context):
         self.report({"INFO"}, self.group_name)
-        found_groups = [g for g in context.scene.alembic_export_settings if g.name == self.group_name]
-
-        # if group not found, create it
-        if len(found_groups) == 0:
-            new_group = context.scene.alembic_export_settings.add()
-            new_group.name = self.group_name
-            context.scene.alembic_export_index += 1
-
-        for obj in context.selected_objects:
-            obj.export_group = self.group_name
+        add_selected_objects_to_group(context.selected_objects, self.group_name)
 
         return {"FINISHED"}
 
+
+class AddSelectedToExportGroupOperatorNoQuery(bpy.types.Operator):
+    """ Add selected objects to an export group.
+    If op is invoked, user will be asked for group name.
+    """
+    bl_idname = "scene.add_selected_to_group_no_query"
+    bl_label = "Add selected objects to export group"
+    bl_options = {"REGISTER", "UNDO"}
+
+    group_name: bpy.props.StringProperty(name="Group name")
+
+    def execute(self, context):
+        self.report({"INFO"}, self.group_name)
+        add_selected_objects_to_group(self.group_name, context)
+        return {"FINISHED"}
+
+
+class RemoveSelectedFromExportGroupOperator(bpy.types.Operator):
+    bl_idname = "scene.remove_selected_from_group"
+    bl_label = "Remove selected objects from export group"
+    bl_options = {"REGISTER", "UNDO"}
+
+    group_name: bpy.props.StringProperty(name="Group name")
+
+    def execute(self, context):
+        found_groups = [g for g in context.scene.alembic_export_groups if g.name == self.group_name]
+
+        if len(found_groups) > 0:
+            found_obj_idxs = [i for i, o in enumerate(found_groups[0].objects)
+                              if o.object in context.selected_objects]
+            found_obj_idxs.reverse()
+            for idx in found_obj_idxs:
+                found_groups[0].objects.remove(idx)
+        else:
+            return {"CANCELLED"}
+
+        return {"FINISHED"}
+
+
+class CreateExportGroupOperator(bpy.types.Operator):
+    bl_idname = "scene.create_export_group"
+    bl_label = "Create group"
+    bl_options = {"REGISTER", "UNDO"}
+
+    group_name: bpy.props.StringProperty(name="Group name")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        found_groups = [g for g in context.scene.alembic_export_groups
+                        if g.name == self.group_name]
+
+        if len(found_groups) == 0:
+            new_group = context.scene.alembic_export_groups.add()
+            new_group.name = self.group_name
+            for obj in context.selected_objects:
+                obj_ref = new_group.objects.add()
+                obj_ref.object = obj
+
+        return {"FINISHED"}
 
 enum_modifier_triangulate_quad_method_items = [
     ("BEAUTY", "Beauty", "Split the quads in nice triangles, slower method", 1),
@@ -55,12 +129,6 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
     """ Complete set of settings for exporting alembic.
     Also contains a couple of service settings like expanded and group_selected.
     """
-    expanded: bpy.props.BoolProperty(
-        name="Expanded",
-        default=False)
-    group_selected: bpy.props.BoolProperty(
-        name="Selected",
-        default=False)
     filepath: bpy.props.StringProperty(
         name="File path",
         subtype="FILE_PATH")
@@ -176,6 +244,25 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
         default=False)
 
 
+class GroupObject(bpy.types.PropertyGroup):
+    object: bpy.props.PointerProperty(type=bpy.types.Object)
+
+
+class ExportGroup(bpy.types.PropertyGroup):
+    expanded: bpy.props.BoolProperty(
+        name="Expanded",
+        default=False)
+    group_selected: bpy.props.BoolProperty(
+        name="Selected",
+        default=False)
+    objects: bpy.props.CollectionProperty(
+        name="Objects",
+        type=GroupObject)
+    settings: bpy.props.PointerProperty(
+        name="Settings",
+        type=ExportGroupSettings)
+
+
 class ObjectExportGroupPanel(bpy.types.Panel):
     """ Panel in which the user can enter a group name to add to. """
     bl_idname = "OBJECT_PT_export_group"
@@ -206,10 +293,32 @@ class SceneExportGroupPanel(bpy.types.UIList):
         col.prop(item, "group_selected")
 
         if item.expanded:
+            box_objects = box.box()
+            if len(item.objects) > 0:
+                box_objects.label(text="Objects", icon="OBJECT_DATA")
+                for obj in item.objects:
+                    box_objects.prop(obj.object, "name")
+            else:
+                box_objects.label(text="No objects in group")
+
+            # add ops
+            row = box.row()
+            col = row.column()
+            op_add = col.operator("scene.add_selected_to_group_no_query", icon="ADD")
+            op_add.group_name = item.name
+            col = row.column()
+            op_remove = col.operator("scene.remove_selected_from_group", icon="REMOVE")
+            op_remove.group_name = item.name
+            col = row.column()
+            op_select = col.operator("scene.select_export_group_objects", icon="SELECT_SET")
+            op_select.group_name = item.name
+
+            box_settings = box.box()
+            box_settings.label(text="Export settings", icon="SETTINGS")
             for propname in [k
-                             for k in item.__annotations__.keys()
+                             for k in item.settings.__annotations__.keys()
                              if k not in ["expanded", "group_selected"]]:
-                box.prop(item, propname)
+                box_settings.prop(item.settings, propname)
 
 
 class SceneExportGroupsPanel(bpy.types.Panel):
@@ -226,10 +335,14 @@ class SceneExportGroupsPanel(bpy.types.Panel):
             "SCENE_UL_export_group",
             "",
             context.scene,
-            "alembic_export_settings",
+            "alembic_export_groups",
             context.scene,
             "alembic_export_index")
 
+        self.layout.operator(
+            "scene.create_export_group",
+            text=CreateExportGroupOperator.bl_label,
+            icon="ADD")
         self.layout.operator(
             "scene.export_groups",
             text=ExportGroupsOperator.bl_label,
@@ -251,30 +364,54 @@ class DeleteSelectedExportGroupsOperator(bpy.types.Operator):
 
     def execute(self, context):
         selected_groups = [(i, s.name)
-                     for i, s in enumerate(context.scene.alembic_export_settings)
+                     for i, s in enumerate(context.scene.alembic_export_groups)
                      if s.group_selected]
         idxs, names = zip(*selected_groups)
 
-        # first clear property on objects in groups
-        for obj in bpy.data.objects:
-            if obj.export_group in names:
-                obj.export_group = ""
-
         # now delete the groups
-        for settings_idx in idxs:
-            context.scene.alembic_export_settings.remove(settings_idx)
+        for group_idx in idxs:
+            context.scene.alembic_export_groups.remove(group_idx)
 
         return {"FINISHED"}
 
 
-def export_group(settings):
+class SelectExportGroupObjectsOperator(bpy.types.Operator):
+    bl_idname = "scene.select_export_group_objects"
+    bl_label = "Select objects within this group"
+
+    group_name: bpy.props.StringProperty(name="Group name")
+
+    def execute(self, context):
+        found_groups = [g for g in context.scene.alembic_export_groups
+                        if g.name == self.group_name]
+
+        if len(found_groups) == 0:
+            return {"CANCELLED"}
+
+        # first deselect current selection
+        for obj in context.selected_objects:
+            obj.select_set(state=False)
+
+        for obj_ref in found_groups[0].objects:
+            obj_ref.object.select_set(state=True)
+
+        return {"FINISHED"}
+
+
+def do_export_group(export_group, context):
+    filedir = os.path.dirname(export_group.settings.filepath)
+    if not os.path.exists(filedir):
+        os.makedirs(filedir)
+
     for obj in bpy.data.objects:
-        obj.select_set(obj.export_group == settings.name)
+        obj.select_set(state=False)
+
+    for obj_ref in export_group.objects:
+        obj_ref.object.select_set(state=True)
 
     # filter out args from property group
-    opargs = {k: getattr(settings, k)
-              for k in settings.__annotations__.keys()
-              if k not in ["name", "expanded", "group_selected"]}
+    opargs = {k: getattr(export_group.settings, k)
+              for k in export_group.settings.__annotations__.keys()}
     return bpy.ops.wm.alembic_export(context.copy(),
                                      "EXEC_DEFAULT",
                                      **opargs)
@@ -287,15 +424,15 @@ class ExportGroupsOperator(bpy.types.Operator):
 
     def execute(self, context):
         print("Running")
-        for settings in context.scene.alembic_export_settings:
-            print("Exporting group {}".format(settings.name))
-            if settings.filepath == "":
+        for export_group in context.scene.alembic_export_groups:
+            print("Exporting group {}".format(export_group.name))
+            if export_group.settings.filepath == "":
                 self.report(
                     {"ERROR"},
-                    "Filepath cannot be empty for group {}".format(settings.name))
+                    "Filepath cannot be empty for group {}".format(export_group.name))
                 return {"CANCELLED"}
 
-            export_group(settings)
+            do_export_group(export_group, context)
 
         self.report({"INFO"}, "All alembic groups exported")
         return {"FINISHED"}
@@ -308,18 +445,18 @@ class ExportSelectedGroupsOperator(bpy.types.Operator):
 
     def execute(self, context):
         print("Running")
-        for settings in context.scene.alembic_export_settings:
-            if not settings.group_selected:
+        for export_group in context.scene.alembic_export_groups:
+            if not export_group.group_selected:
                 continue
 
-            print("Exporting group {}".format(settings.name))
-            if settings.filepath == "":
+            print("Exporting group {}".format(export_group.name))
+            if export_group.settings.filepath == "":
                 self.report(
                     {"ERROR"},
-                    "Filepath cannot be empty for group {}".format(settings.name))
+                    "Filepath cannot be empty for group {}".format(export_group.name))
                 return {"CANCELLED"}
 
-            export_group(settings)
+            do_export_group(export_group, context)
 
         self.report({"INFO"}, "All selected alembic groups exported")
         return {"FINISHED"}
@@ -330,16 +467,19 @@ def menu_func(self, context):
 
 
 def register():
-    bpy.types.Object.export_group = bpy.props.StringProperty(
-        name="Export group",
-        description="Name of alembic export group")
     bpy.utils.register_class(ExportGroupSettings)
-    bpy.types.Scene.alembic_export_settings = bpy.props.CollectionProperty(
-        type=ExportGroupSettings)
+    bpy.utils.register_class(GroupObject)
+    bpy.utils.register_class(ExportGroup)
+    bpy.types.Scene.alembic_export_groups = bpy.props.CollectionProperty(
+        type=ExportGroup)
     bpy.types.Scene.alembic_export_index = bpy.props.IntProperty(
         name="Index for alembic export group",
         default=0)
     bpy.utils.register_class(AddSelectedToExportGroupOperator)
+    bpy.utils.register_class(AddSelectedToExportGroupOperatorNoQuery)
+    bpy.utils.register_class(RemoveSelectedFromExportGroupOperator)
+    bpy.utils.register_class(SelectExportGroupObjectsOperator)
+    bpy.utils.register_class(CreateExportGroupOperator)
     bpy.utils.register_class(ObjectExportGroupPanel)
     bpy.utils.register_class(SceneExportGroupPanel)
     bpy.utils.register_class(SceneExportGroupsPanel)
@@ -350,11 +490,16 @@ def register():
 
 
 def unregister():
-    del bpy.types.Object.export_group
-    del bpy.types.Scene.alembic_export_settings
+    del bpy.types.Scene.alembic_export_groups
     del bpy.types.Scene.alembic_export_index
+    bpy.utils.unregister_class(ExportGroup)
+    bpy.utils.unregister_class(GroupObject)
     bpy.utils.unregister_class(ExportGroupSettings)
     bpy.utils.unregister_class(AddSelectedToExportGroupOperator)
+    bpy.utils.unregister_class(AddSelectedToExportGroupOperatorNoQuery)
+    bpy.utils.unregister_class(RemoveSelectedFromExportGroupOperator)
+    bpy.utils.unregister_class(CreateExportGroupOperator)
+    bpy.utils.unregister_class(SelectExportGroupObjectsOperator)
     bpy.utils.unregister_class(ObjectExportGroupPanel)
     bpy.utils.unregister_class(SceneExportGroupPanel)
     bpy.utils.unregister_class(SceneExportGroupsPanel)
