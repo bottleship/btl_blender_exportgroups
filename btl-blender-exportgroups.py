@@ -48,7 +48,7 @@ class AddSelectedToExportGroupOperator(bpy.types.Operator):
 
     def execute(self, context):
         self.report({"INFO"}, self.group_name)
-        add_selected_objects_to_group(context.selected_objects, self.group_name)
+        add_selected_objects_to_group(self.group_name, context)
 
         return {"FINISHED"}
 
