@@ -2,8 +2,6 @@ import bpy
 import sys
 import os
 
-# from bpy import context
-
 
 bl_info = {
     "name": "Alembic Export Groups",
@@ -244,7 +242,7 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
         default=True)
     as_background_job: bpy.props.BoolProperty(
         name="Run as background job",
-        description="Enable this to run the import in the background, disable to block Blender while importing. ",
+        description="Enable this to run the export in the background, disable to block Blender while exporting. ",
         default=False)
 
 
