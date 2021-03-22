@@ -17,8 +17,9 @@ def add_selected_objects_to_group(group_name, context):
     # if group not found, create it
     if len(found_groups) == 0:
         new_group = context.scene.alembic_export_groups.add()
-        # new_group.objects = bpy.props.CollectionProperty(type=GroupObject)
         new_group.name = group_name
+        new_group.settings.start = context.scene.frame_start
+        new_group.settings.end = context.scene.frame_end
         context.scene.alembic_export_index += 1
         for obj in context.selected_objects:
             obj_ref = new_group.objects.add()
@@ -110,6 +111,8 @@ If invoked, user will be queried for group name
         if len(found_groups) == 0:
             new_group = context.scene.alembic_export_groups.add()
             new_group.name = self.group_name
+            new_group.settings.start = context.scene.frame_start
+            new_group.settings.end = context.scene.frame_end
             for obj in context.selected_objects:
                 obj_ref = new_group.objects.add()
                 obj_ref.object = obj
