@@ -70,6 +70,7 @@ class AddSelectedToExportGroupOperatorNoQuery(bpy.types.Operator):
 
 
 class RemoveSelectedFromExportGroupOperator(bpy.types.Operator):
+    """ Remove selected objects from export group. """
     bl_idname = "scene.remove_selected_from_group"
     bl_label = "Remove selected objects from export group"
     bl_options = {"REGISTER", "UNDO"}
@@ -92,6 +93,9 @@ class RemoveSelectedFromExportGroupOperator(bpy.types.Operator):
 
 
 class CreateExportGroupOperator(bpy.types.Operator):
+    """ Create a new export group.
+If invoked, user will be queried for group name
+    """
     bl_idname = "scene.create_export_group"
     bl_label = "Create group"
     bl_options = {"REGISTER", "UNDO"}
@@ -376,6 +380,8 @@ class DeleteSelectedExportGroupsOperator(bpy.types.Operator):
 
 
 class SelectExportGroupObjectsOperator(bpy.types.Operator):
+    """ Select the objects contained in this group.
+    """
     bl_idname = "scene.select_export_group_objects"
     bl_label = "Select objects within this group"
 
