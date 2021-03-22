@@ -246,7 +246,7 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
     as_background_job: bpy.props.BoolProperty(
         name="Run as background job",
         description="Enable this to run the export in the background, disable to block Blender while exporting. ",
-        default=False)
+        default=True)
 
 
 class GroupObject(bpy.types.PropertyGroup):
