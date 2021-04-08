@@ -95,5 +95,9 @@ class SceneExportGroupsPanel(bpy.types.Panel):
             text=btlops.ExportSelectedGroupsOperator.bl_label,
             icon="EXPORT")
         self.layout.operator(
+            "scene.set_selected_groups_range",
+            text=btlops.SetSelectedGroupsRangeFromSceneOperator.bl_label,
+            icon="PREVIEW_RANGE")
+        self.layout.operator(
             "scene.delete_selected_export_groups",
             icon="TRASH")

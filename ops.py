@@ -219,3 +219,19 @@ class ExportSelectedGroupsOperator(bpy.types.Operator):
 
         self.report({"INFO"}, "All selected alembic groups exported")
         return {"FINISHED"}
+
+
+class SetSelectedGroupsRangeFromSceneOperator(bpy.types.Operator):
+    """ Set the frame range of each selected group from the scene """
+    bl_idname = "scene.set_selected_groups_range"
+    bl_label = "Set selected groups range from scene"
+
+    def execute(self, context):
+        for export_group in context.scene.alembic_export_groups:
+            if not export_group.group_selected:
+                continue
+
+            export_group.settings.start = context.scene.frame_start
+            export_group.settings.end = context.scene.frame_end
+
+        return {"FINISHED"}
