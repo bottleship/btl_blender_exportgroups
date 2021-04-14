@@ -1,2 +1,3 @@
-$ignore = @(".git")
-Get-ChildItem $PSScriptRoot | where { $_.Name -notin $ignore } | Compress-Archive -DestinationPath "${PSScriptRoot}.zip" -Update
+$name = split-path -leaf $PSScriptRoot
+$targetDir = "x:\_pipeline\salt\installers_salt\Bottleship"
+& "c:\Program Files\7-Zip\7z.exe" u -xr!'.git' -xr!'*.*~' "${targetDir}\${name}.zip" "${PSScriptRoot}"
