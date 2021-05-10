@@ -13,7 +13,8 @@ enum_modifier_triangulate_ngon_method_items = [
 
 class ExportGroupSettings(bpy.types.PropertyGroup):
     """ Complete set of settings for exporting alembic.
-    Also contains a couple of service settings like expanded and group_selected.
+    These are the same as the settings defined in io_alembic.c
+    which, however, are bound to the ui and not exposed in Python.
     """
     filepath: bpy.props.StringProperty(
         name="File path",
@@ -131,10 +132,16 @@ class ExportGroupSettings(bpy.types.PropertyGroup):
 
 
 class GroupObject(bpy.types.PropertyGroup):
+    """ This is a pointer to an object;
+    used in a collection in the export group.
+    """
     object: bpy.props.PointerProperty(type=bpy.types.Object)
 
 
 class ExportGroup(bpy.types.PropertyGroup):
+    """ The export group combines the list of objects,
+    the export settings, and a couple of service properties.
+    """
     expanded: bpy.props.BoolProperty(
         name="Expanded",
         default=False)
