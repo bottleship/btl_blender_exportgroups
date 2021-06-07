@@ -1,5 +1,6 @@
 import bpy
 
+# These enums are literal copies of the ones defined in io_alembic.c
 enum_modifier_triangulate_quad_method_items = [
     ("BEAUTY", "Beauty", "Split the quads in nice triangles, slower method", 1),
     ("FIXED", "Fixed", "Split the quads on the first and third vertices", 2),

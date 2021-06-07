@@ -36,13 +36,12 @@ class SceneExportGroupPanel(bpy.types.UIList):
         col.prop(item, "group_selected")
 
         if item.expanded:
-            box_objects = box.box()
-            if len(item.objects) > 0:
-                box_objects.label(text="Objects", icon="OBJECT_DATA")
-                for obj in item.objects:
-                    box_objects.prop(obj.object, "name")
-            else:
-                box_objects.label(text="No objects in group")
+            box_settings = box.box()
+            box_settings.label(text="Export settings", icon="SETTINGS")
+            for propname in [k
+                             for k in item.settings.__annotations__.keys()
+                             if k not in ["expanded", "group_selected"]]:
+                box_settings.prop(item.settings, propname)
 
             # add ops
             row = box.row()
@@ -56,12 +55,13 @@ class SceneExportGroupPanel(bpy.types.UIList):
             op_select = col.operator("scene.select_export_group_objects", icon="SELECT_SET")
             op_select.group_name = item.name
 
-            box_settings = box.box()
-            box_settings.label(text="Export settings", icon="SETTINGS")
-            for propname in [k
-                             for k in item.settings.__annotations__.keys()
-                             if k not in ["expanded", "group_selected"]]:
-                box_settings.prop(item.settings, propname)
+            box_objects = box.box()
+            if len(item.objects) > 0:
+                box_objects.label(text="Objects", icon="OBJECT_DATA")
+                for obj in item.objects:
+                    box_objects.prop(obj.object, "name")
+            else:
+                box_objects.label(text="No objects in group")
 
 
 class SceneExportGroupsPanel(bpy.types.Panel):

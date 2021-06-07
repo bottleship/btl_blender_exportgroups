@@ -11,7 +11,7 @@ import btl_blender_exportgroups.data as btldata
 bl_info = {
     "name": "Alembic Export Groups",
     "author": "Mois Moshev (Bottleship)",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (2, 80, 0),
     "description": "Persist groups of objects with their own alembic export settings",
     "category": "Object"
